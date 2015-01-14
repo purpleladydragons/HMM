@@ -5,7 +5,7 @@ from hmm import HMM
 # santize each one and add its contents (as characters) to a list
 
 data = []
-with open("corpus/A01", "r") as f:
+with open("A01", "r") as f:
     content = f.readlines()
     for line in content:
         # skip over the first 10 chars which are boiler and turn multiple whitespace into single
