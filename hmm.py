@@ -12,10 +12,11 @@ class HMM:
         self.M = M
         self.data = data
 
-        # TODO turn from zeros into random stochastic-row matrices
         # TODO can't be uniform, but should be close to it
         # pi is matrix of initial probabalities
         self.PI = np.zeros((1,N))
+        self.PI.fill(1.0/N)
+
         # a is matrix of transitions between states
         self.A = np.zeros((N,N))
         # b is matrix of observation probabilities given a state
@@ -33,7 +34,7 @@ class HMM:
         
 
         for i in range(self.N):
-            alpha[0,i] = self.PI[0,i] * self.B[0,self.get_index_of_observation(observations[0,0])]
+            alpha[0,i] = self.PI[0,i] * self.B[i, self.get_index_of_observation(observations[0,0])]
             c[0,0] += alpha[0,i]
        
         c[0,0] = 1.0 / c[0,0]
@@ -45,9 +46,7 @@ class HMM:
             for i in range(self.N):
                 alpha[t,i] = 0
                 for j in range(self.N):
-                    # TODO make sure A is proper for this format
                     alpha[t,i] += alpha[t-1, j] * self.A[j,i]
-                # TODO this is another potentially problematic line (confusing) liek this is almsot definitely wrong or different from line 35
                 alpha[t,i] = alpha[t,i] * self.B[i, self.get_index_of_observation(observations[0,t])]
                 c[0,t] += alpha[t,i]
             
@@ -92,7 +91,7 @@ class HMM:
 
         return gamma, digamma
 
-    def reestimate(self, gamma, observations):
+    def reestimate(self, gamma, digamma, observations):
         T = len(observations)
 
         for i in range(self.N):
@@ -101,12 +100,12 @@ class HMM:
         # update A
         for i in range(self.N):
             for j in range(self.N):
-                numer = 0
+                # have as float to guarantee float division
+                numer = 0.0
                 denom = 0
                 for t in range(T-1):
                     numer += digamma[t,i,j]
                     denom += gamma[t,i]
-                # TODO floatify?
                 self.A[i,j] = numer/denom
 
         # update B
@@ -130,15 +129,25 @@ class HMM:
 
         return log_prob
         
-    # TODO this whole while loop structure doesn't work with the log probability comparison
     def train(self, observations):
-        while(self.iters < self.max_iters and self.log_prob > self.old_log_prob):
-            self.alpha_pass(observations)
-            self.beta_pass()
-            self.compute_gamma()
-            self.reestimate()
-            self.compute_log()
 
+        # run once in order to initialize log probability
+        c, alpha = self.alpha_pass(observations)
+        beta = self.beta_pass(c, alpha, observations)
+        gamma, digamma = self.compute_gamma(c, alpha, beta, observations)
+        self.reestimate(gamma, digamma, observations)
+        self.log_prob = self.compute_log(c, observations)
+    
+        self.iters += 1
+
+        while(self.iters < self.max_iters and self.log_prob > self.old_log_prob):
             self.old_log_prob = self.log_prob
+
+            c, alpha = self.alpha_pass(observations)
+            beta = self.beta_pass(c, alpha, observations)
+            gamma, digamma = self.compute_gamma(c, alpha, beta, observations)
+            self.reestimate(gamma, digamma, observations)
+            self.log_prob = self.compute_log(c, observations)
+
             self.iters += 1
             
