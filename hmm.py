@@ -1,16 +1,13 @@
 import numpy as np
-
-# number of hidden states
-N = 3 
-
-# number of observations (40 for english phonemes)
-M = 40
+import time
 
 class HMM:
-    def __init__(self, N, M, data, max_iters=100):
+    def __init__(self, N, M, data, obs_indices, max_iters=100):
+        """ N is number of hidden states. M is number of observations per state."""
         self.N = N
         self.M = M
         self.data = data
+        self.obs_indices = obs_indices
 
         # initializing the matrices suggests that all elements of each matrix be close (but not equal) to uniform
 
@@ -37,12 +34,14 @@ class HMM:
         self.old_log_prob = float("-inf")
         self.log_prob = 0
 
+    def get_index_of_observation(self,observation):
+        return self.obs_indices.index(observation)
+
     def alpha_pass(self, observations):
-        c = np.zeros((1,N))
+        T = max(observations.shape)
+        c = np.zeros((1,T))
         c[0,0] = 0
-        T = len(observations)
-        alpha = np.zeros((T, N))
-        
+        alpha = np.zeros((T, self.N))
 
         for i in range(self.N):
             alpha[0,i] = self.PI[0,i] * self.B[i, self.get_index_of_observation(observations[0,0])]
@@ -62,22 +61,22 @@ class HMM:
                 c[0,t] += alpha[t,i]
             
             c[0,t] = 1.0 / c[0,t]
-            for i in range(N):
+            for i in range(self.N):
                 alpha[t,i] = c[0,t] * alpha[t,i]
 
         return c, alpha
 
     def beta_pass(self, c, alpha, observations):
-        T = len(observations)
+        T = max(observations.shape)
 
         beta = np.zeros((T, self.N))
-        for i in range(N):
+        for i in range(self.N):
             beta[T-1, i] = c[0,T-1]
 
         for t in range(T-2, 0, -1):
-            for i in range(N):
+            for i in range(self.N):
                 beta[t,i] = 0
-                for j in range(N):
+                for j in range(self.N):
                     beta[t,i] = beta[t,i] + self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0,t])] * beta[t+1, j]
 
                 beta[t,i] = c[0,t] * beta[t,i]
@@ -85,25 +84,25 @@ class HMM:
         return beta
 
     def compute_gamma(self, c, alpha, beta, observations):
-        T = len(observations)
+        T = max(observations.shape)
         gamma = np.zeros((T, self.N))
         digamma = np.zeros((T, self.N, self.N))
         for t in range(T-1):
             denom = 0
-            for i in range(N):
-                for j in range(N):
+            for i in range(self.N):
+                for j in range(self.N):
                     denom = denom + alpha[t,i] * self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0,t+1])] * beta[t+1,j]
 
-            for i in range(N):
+            for i in range(self.N):
                 gamma[t,i] = 0
-                for j in range(N):
+                for j in range(self.N):
                     digamma[t,i,j] = alpha[t,i] * self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0, t+1])] * beta[t+1,j] / denom
                     gamma[t,i] += digamma[t,i,j]
 
         return gamma, digamma
 
     def reestimate(self, gamma, digamma, observations):
-        T = len(observations)
+        T = max(observations.shape)
 
         for i in range(self.N):
             self.PI[0,i] = gamma[0,i]
@@ -113,7 +112,7 @@ class HMM:
             for j in range(self.N):
                 # have as float to guarantee float division
                 numer = 0.0
-                denom = 0
+                denom = 0.0
                 for t in range(T-1):
                     numer += digamma[t,i,j]
                     denom += gamma[t,i]
@@ -124,25 +123,33 @@ class HMM:
             for j in range(self.M):
                 # have as float to guarantee float division
                 numer = 0.0
-                denom = 0
+                denom = 0.0
                 for t in range(T-1):
-                    if(self.get_index_of_observration(observations[0,t]) == j):
+                    if(self.get_index_of_observation(observations[0,t]) == j):
                         numer += gamma[t,i]
                     denom += gamma[t,i]
                 self.B[i,j] = numer / denom
 
     def compute_log(self, c, observations):
-        T = len(observations)
+        T = max(observations.shape)
         log_prob = 0
 
         for t in range(T):
-            log_prob += np.log(c[0,i])
+            log_prob += np.log(c[0,t])
         log_prob = -log_prob
 
         return log_prob
-        
-    def train(self, observations):
 
+    def print_B(self):
+        for m in range(self.M):
+            for n in range(self.N):
+                print self.B[n,m], self.B[n,m]
+        
+        
+    def train(self):
+        start_time = time.time()
+
+        observations = self.data
         # run once in order to initialize log probability
         c, alpha = self.alpha_pass(observations)
         beta = self.beta_pass(c, alpha, observations)
@@ -153,6 +160,7 @@ class HMM:
         self.iters += 1
 
         while(self.iters < self.max_iters and self.log_prob > self.old_log_prob):
+            then = time.time()
             self.old_log_prob = self.log_prob
 
             c, alpha = self.alpha_pass(observations)
@@ -161,5 +169,9 @@ class HMM:
             self.reestimate(gamma, digamma, observations)
             self.log_prob = self.compute_log(c, observations)
 
+            print "loopdeloop:", time.time()-then
+            print "score:", self.log_prob
             self.iters += 1
             
+        print "total run time:", time.time() - start_time
+        print "number of iterations:", self.iters
