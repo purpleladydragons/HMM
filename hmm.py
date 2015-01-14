@@ -48,7 +48,7 @@ class HMM:
                     # TODO make sure A is proper for this format
                     alpha[t,i] += alpha[t-1, j] * self.A[j,i]
                 # TODO this is another potentially problematic line (confusing) liek this is almsot definitely wrong or different from line 35
-                alpha[t,i] = alpha[t,i] * self.B[i, self.get_index_of_observation(observations[0,t]) 
+                alpha[t,i] = alpha[t,i] * self.B[i, self.get_index_of_observation(observations[0,t])]
                 c[0,t] += alpha[t,i]
             
             c[0,t] = 1.0 / c[0,t]
@@ -82,12 +82,12 @@ class HMM:
             denom = 0
             for i in range(N):
                 for j in range(N):
-                    denom = denom + alpha[t,i] * self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0,t+1])], * beta[t+1,j]
+                    denom = denom + alpha[t,i] * self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0,t+1])] * beta[t+1,j]
 
             for i in range(N):
                 gamma[t,i] = 0
                 for j in range(N):
-                    digamma[t,i,j] = alpha[t,i] * self.A[i,j] * self.B[j self.get_index_of_observation(observations[0, t+1])] * beta[t+1,j] / denom
+                    digamma[t,i,j] = alpha[t,i] * self.A[i,j] * self.B[j, self.get_index_of_observation(observations[0, t+1])] * beta[t+1,j] / denom
                     gamma[t,i] += digamma[t,i,j]
 
         return gamma, digamma
