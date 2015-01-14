@@ -12,11 +12,12 @@ class HMM:
         self.M = M
         self.data = data
 
-        # TODO can't be uniform, but should be close to it
-        # pi is matrix of initial probabalities
+        # pi is matrix of initial probabalities that is nearly uniformly distributed
         self.PI = np.zeros((1,N))
         self.PI.fill(1.0/N)
-
+        noise = np.random.rand(1,N) / N
+        self.PI -= noise
+        
         # a is matrix of transitions between states
         self.A = np.zeros((N,N))
         # b is matrix of observation probabilities given a state
