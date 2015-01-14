@@ -12,20 +12,30 @@ class HMM:
         self.M = M
         self.data = data
 
-        # pi is matrix of initial probabalities that is nearly uniformly distributed
+        # initializing the matrices suggests that all elements of each matrix be close (but not equal) to uniform
+
+        # pi is matrix of initial probabalities 
         self.PI = np.zeros((1,N))
         self.PI.fill(1.0/N)
         noise = np.random.rand(1,N) / N
-        self.PI -= noise
+        self.PI += noise
         
         # a is matrix of transitions between states
         self.A = np.zeros((N,N))
+        self.A.fill(1.0/(N*N))
+        noise = np.random.rand(N,N) / (N*N)
+        self.A += noise
+
         # b is matrix of observation probabilities given a state
         self.B = np.zeros((N,M))
+        self.B.fill(1.0/(N*M))
+        noise = np.random.rand(N,M) / (N*M)
+        self.B += noise
         
         self.max_iters = max_iters
         self.iters = 0
         self.old_log_prob = float("-inf")
+        self.log_prob = 0
 
     def alpha_pass(self, observations):
         c = np.zeros((1,N))
