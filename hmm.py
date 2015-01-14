@@ -111,7 +111,8 @@ class HMM:
         # update B
         for i in range(self.N):
             for j in range(self.M):
-                numer = 0
+                # have as float to guarantee float division
+                numer = 0.0
                 denom = 0
                 for t in range(T-1):
                     if(self.get_index_of_observration(observations[0,t]) == j):
