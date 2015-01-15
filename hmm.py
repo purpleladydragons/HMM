@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 class HMM:
-    def __init__(self, N, M, data, obs_indices, max_iters=100):
+    def __init__(self, N, M, data, obs_indices, max_iters=1000):
         """ N is number of hidden states. M is number of observations per state."""
         self.N = N
         self.M = M
@@ -143,7 +143,8 @@ class HMM:
     def print_B(self):
         for m in range(self.M):
             for n in range(self.N):
-                print self.B[n,m], self.B[n,m]
+                print self.B[n,m], 
+            print ""
         
         
     def train(self):
@@ -159,7 +160,9 @@ class HMM:
     
         self.iters += 1
 
-        while(self.iters < self.max_iters and self.log_prob > self.old_log_prob):
+        # buffer allows a little bit of de-optimization in order to get out of small valleys
+        buffer = 20
+        while(self.iters < self.max_iters and self.log_prob > self.old_log_prob - buffer):
             then = time.time()
             self.old_log_prob = self.log_prob
 
@@ -172,6 +175,6 @@ class HMM:
             print "loopdeloop:", time.time()-then
             print "score:", self.log_prob
             self.iters += 1
-            
+           
         print "total run time:", time.time() - start_time
         print "number of iterations:", self.iters
